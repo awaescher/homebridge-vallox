@@ -48,7 +48,8 @@ export class ValloxAccessory {
 
     // Switch for boost profile
     // see https://developers.homebridge.io/#/service/Switch
-    this.boostSwitchService = this.accessory.getService(this.platform.Service.Switch) || this.accessory.addService(this.platform.Service.Switch);
+    this.boostSwitchService = this.accessory.getService(this.platform.Service.Switch)
+      || this.accessory.addService(this.platform.Service.Switch);
     this.boostSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Boost');
 
     this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
