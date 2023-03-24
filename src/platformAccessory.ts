@@ -107,20 +107,28 @@ async function getFanSpeedMetricByCurrentProfile(valloxService: Vallox) {
   } else if (profile === valloxService.PROFILES.AWAY) {
     metric = 'A_CYC_AWAY_SPEED_SETTING';
   } else if (profile === valloxService.PROFILES.FIREPLACE) {
-    metric = 'A_CYC_FIREPLACE_SUPP_FAN:'; // Zuluft
+    metric = ''; // n/a
   }
 
   return metric;
 }
 
 async function getFanSpeedOfCurrentProfile(valloxService: Vallox) {
+
   const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
+
+  if (metric === '') {
+    return 0;
+  }
+
   return await valloxService.fetchMetric(metric);
 }
 
 async function setFanSpeedOfCurrentProfile(valloxService: Vallox, value: CharacteristicValue) {
   const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
-  await valloxService.setValues({ [metric]: value });
+  if (metric !== '') {
+    await valloxService.setValues({ [metric]: value });
+  }
 }
 
 // more info on settings at https://github.com/yozik04/vallox_websocket_api
