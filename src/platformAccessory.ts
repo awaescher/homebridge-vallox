@@ -16,6 +16,7 @@ export class ValloxAccessory {
   private exhaustAirTemperatureService: Service;
   private outdoorAirTemperatureService: Service;
   private supplyAirTemperatureService: Service;
+  private humidityService: Service;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -99,7 +100,9 @@ export class ValloxAccessory {
         await valloxService.setProfile(profile);
       });
 
-    // TemperatureSensors (german "Raumluft")
+    // TemperatureSensor
+    // https://developers.homebridge.io/#/service/TemperatureSensor
+    // german "Raumluft"
     this.extractAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Extract Air')
       ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Extract Air Temperature', 'Extract Air'));
     this.extractAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Extract Air Temperature');
@@ -133,6 +136,16 @@ export class ValloxAccessory {
     this.supplyAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
       .onGet(async () => {
         return await valloxService.fetchMetric('A_CYC_TEMP_SUPPLY_AIR');
+      });
+
+    // Humidity sensors
+    // https://developers.homebridge.io/#/service/TemperatureSensor
+    this.humidityService = this.accessory.getServiceById(this.platform.Service.HumiditySensor, 'Humidity')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Humidity', 'Humidity'));
+    this.humidityService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Humidity');
+    this.humidityService.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_ANALOG_SENSOR_INPUT');
       });
   }
 }
