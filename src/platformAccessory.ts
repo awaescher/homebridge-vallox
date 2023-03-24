@@ -13,6 +13,9 @@ export class ValloxAccessory {
   private awaySwitchService: Service;
   private fireplaceSwitchService: Service;
   private extractAirTemperatureService: Service;
+  private exhaustAirTemperatureService: Service;
+  private outdoorAirTemperatureService: Service;
+  private supplyAirTemperatureService: Service;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -96,7 +99,7 @@ export class ValloxAccessory {
         await valloxService.setProfile(profile);
       });
 
-    // TemperatureSensors
+    // TemperatureSensors (german "Raumluft")
     this.extractAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Extract Air')
       ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Extract Air Temperature', 'Extract Air'));
     this.extractAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Extract Air Temperature');
@@ -105,11 +108,32 @@ export class ValloxAccessory {
         return await valloxService.fetchMetric('A_CYC_TEMP_EXTRACT_AIR');
       });
 
-    //   Raumluft   A_CYC_TEMP_EXTRACT_AIR: '22.01',
-    // Fortluft  A_CYC_TEMP_EXHAUST_AIR: '21.33',
-    // Außenluft  A_CYC_TEMP_OUTDOOR_AIR: '11.80',
-    // Zuluft  A_CYC_TEMP_SUPPLY_AIR: '16.55',
+    //  german "Fortluft"
+    this.exhaustAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Exhaust Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Exhaust Air Temperature', 'Exhaust Air'));
+    this.exhaustAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Exhaust Air Temperature');
+    this.exhaustAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_EXHAUST_AIR');
+      });
 
+    //  german "Außenluft"
+    this.outdoorAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Outdoor Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Outdoor Air Temperature', 'Outdoor Air'));
+    this.outdoorAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Outdoor Air Temperature');
+    this.outdoorAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_OUTDOOR_AIR');
+      });
+
+    //  german "Zuluft"
+    this.supplyAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Supply Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Supply Air Temperature', 'Supply Air'));
+    this.supplyAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Supply Air Temperature');
+    this.supplyAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_SUPPLY_AIR');
+      });
   }
 }
 
