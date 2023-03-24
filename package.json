@@ -1,5 +1,4 @@
 {
-  "private": true,
   "displayName": "Vallox",
   "name": "@awaescher/homebridge-vallox",
   "version": "0.0.2-beta.0",
