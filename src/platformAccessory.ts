@@ -52,7 +52,7 @@ export class ValloxAccessory {
     // see https://developers.homebridge.io/#/service/Switch
     this.boostSwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Boost')
       || this.accessory.addService(this.platform.Service.Switch);
-    this.boostSwitchService.setCharacteristic(this.platform.Characteristic.Name + ' Boost', 'Boost');
+    this.boostSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Boost');
 
     this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
@@ -68,7 +68,7 @@ export class ValloxAccessory {
     // see https://developers.homebridge.io/#/service/Switch
     this.awaySwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Away')
       || this.accessory.addService(this.platform.Service.Switch);
-    this.awaySwitchService.setCharacteristic(this.platform.Characteristic.Name + ' Away', 'Away');
+    this.awaySwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Away');
 
     this.awaySwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
@@ -84,7 +84,7 @@ export class ValloxAccessory {
     // see https://developers.homebridge.io/#/service/Switch
     this.fireplaceSwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Fireplace')
       || this.accessory.addService(this.platform.Service.Switch);
-    this.fireplaceSwitchService.setCharacteristic(this.platform.Characteristic.Name + ' Fireplace', 'Fireplace');
+    this.fireplaceSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Fireplace');
 
     this.fireplaceSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
