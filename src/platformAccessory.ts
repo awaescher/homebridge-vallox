@@ -31,20 +31,20 @@ export class ValloxAccessory {
     // see https://developers.homebridge.io/#/service/Fanv2
     this.fanService.getCharacteristic(this.platform.Characteristic.Active)
       .onGet(async () => {
-        const value = await valloxService.fetchMetric('A_CYC_HOME_SPEED_SETTING');
+        const value = await getFanSpeedOfCurrentProfile(valloxService);
         return value > 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const active = value ? 40 : 0;
-        await valloxService.setValues({ A_CYC_HOME_SPEED_SETTING: active });
+        await setFanSpeedOfCurrentProfile(valloxService, active);
       });
 
     this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .onGet(async () => {
-        return await valloxService.fetchMetric('A_CYC_HOME_SPEED_SETTING');
+        return await getFanSpeedOfCurrentProfile(valloxService);
       })
       .onSet(async (value: CharacteristicValue) => {
-        await valloxService.setValues({ A_CYC_HOME_SPEED_SETTING: value });
+        await setFanSpeedOfCurrentProfile(valloxService, value);
       });
 
     // Switch for BOOST profile
@@ -55,8 +55,8 @@ export class ValloxAccessory {
 
     this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
-        const state = await valloxService.getProfile();
-        return state === valloxService.PROFILES.BOOST ? 1 : 0;
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.BOOST ? 1 : 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const profile = value ? valloxService.PROFILES.BOOST : valloxService.PROFILES.HOME;
@@ -71,8 +71,8 @@ export class ValloxAccessory {
 
     this.awaySwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
-        const state = await valloxService.getProfile();
-        return state === valloxService.PROFILES.AWAY ? 1 : 0;
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.AWAY ? 1 : 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const profile = value ? valloxService.PROFILES.AWAY : valloxService.PROFILES.HOME;
@@ -87,8 +87,8 @@ export class ValloxAccessory {
 
     this.fireplaceSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
-        const state = await valloxService.getProfile();
-        return state === valloxService.PROFILES.FIREPLACE ? 1 : 0;
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.FIREPLACE ? 1 : 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const profile = value ? valloxService.PROFILES.FIREPLACE : valloxService.PROFILES.HOME;
@@ -97,6 +97,31 @@ export class ValloxAccessory {
   }
 }
 
+async function getFanSpeedMetricByCurrentProfile(valloxService: Vallox) {
+
+  const profile = await valloxService.getProfile();
+
+  let metric = 'A_CYC_HOME_SPEED_SETTING';
+  if (profile === valloxService.PROFILES.BOOST) {
+    metric = 'A_CYC_BOOST_SPEED_SETTING';
+  } else if (profile === valloxService.PROFILES.AWAY) {
+    metric = 'A_CYC_AWAY_SPEED_SETTING';
+  } else if (profile === valloxService.PROFILES.FIREPLACE) {
+    metric = 'A_CYC_FIREPLACE_SUPP_FAN:'; // Zuluft
+  }
+
+  return metric;
+}
+
+async function getFanSpeedOfCurrentProfile(valloxService: Vallox) {
+  const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
+  return await valloxService.fetchMetric(metric);
+}
+
+async function setFanSpeedOfCurrentProfile(valloxService: Vallox, value: CharacteristicValue) {
+  const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
+  await valloxService.setValues({ [metric]: value });
+}
 
 // more info on settings at https://github.com/yozik04/vallox_websocket_api
 
