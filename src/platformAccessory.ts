@@ -10,6 +10,8 @@ import { ValloxPlatform } from './platform';
 export class ValloxAccessory {
   private fanService: Service;
   private boostSwitchService: Service;
+  private awaySwitchService: Service;
+  private fireplaceSwitchService: Service;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -46,7 +48,7 @@ export class ValloxAccessory {
       });
 
 
-    // Switch for boost profile
+    // Switch for BOOST profile
     // see https://developers.homebridge.io/#/service/Switch
     this.boostSwitchService = this.accessory.getService(this.platform.Service.Switch)
       || this.accessory.addService(this.platform.Service.Switch);
@@ -55,11 +57,42 @@ export class ValloxAccessory {
     this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
         const state = await valloxService.getProfile();
-        platform.log.info('profile was ', state);
         return state === valloxService.PROFILES.BOOST ? 1 : 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const profile = value ? valloxService.PROFILES.BOOST : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
+      });
+
+    // Switch for AWAY profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.awaySwitchService = this.accessory.getService(this.platform.Service.Switch)
+      || this.accessory.addService(this.platform.Service.Switch);
+    this.awaySwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Away');
+
+    this.awaySwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const state = await valloxService.getProfile();
+        return state === valloxService.PROFILES.AWAY ? 1 : 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.AWAY : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
+      });
+
+    // Switch for FIREPLACE profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.fireplaceSwitchService = this.accessory.getService(this.platform.Service.Switch)
+      || this.accessory.addService(this.platform.Service.Switch);
+    this.fireplaceSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Fireplace');
+
+    this.fireplaceSwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const state = await valloxService.getProfile();
+        return state === valloxService.PROFILES.FIREPLACE ? 1 : 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.FIREPLACE : valloxService.PROFILES.HOME;
         await valloxService.setProfile(profile);
       });
   }
