@@ -12,6 +12,7 @@ export class ValloxAccessory {
   private boostSwitchService: Service;
   private awaySwitchService: Service;
   private fireplaceSwitchService: Service;
+  private extractAirTemperatureService: Service;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -94,6 +95,21 @@ export class ValloxAccessory {
         const profile = value ? valloxService.PROFILES.FIREPLACE : valloxService.PROFILES.HOME;
         await valloxService.setProfile(profile);
       });
+
+    // TemperatureSensors
+    this.extractAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Extract Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Extract Air Temperature', 'Extract Air'));
+    this.extractAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Extract Air Temperature');
+    this.extractAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_EXTRACT_AIR');
+      });
+
+    //   Raumluft   A_CYC_TEMP_EXTRACT_AIR: '22.01',
+    // Fortluft  A_CYC_TEMP_EXHAUST_AIR: '21.33',
+    // Außenluft  A_CYC_TEMP_OUTDOOR_AIR: '11.80',
+    // Zuluft  A_CYC_TEMP_SUPPLY_AIR: '16.55',
+
   }
 }
 
