@@ -8,7 +8,8 @@ import { ValloxPlatform } from './platform';
  * Each accessory may expose multiple services of different service types.
  */
 export class ValloxAccessory {
-  private service: Service;
+  private fanService: Service;
+  private boostSwitchService: Service;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -21,16 +22,12 @@ export class ValloxAccessory {
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
       .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Vallox');
 
-    this.service = this.accessory.getService(this.platform.Service.Fanv2) || this.accessory.addService(this.platform.Service.Fanv2);
+    this.fanService = this.accessory.getService(this.platform.Service.Fanv2) || this.accessory.addService(this.platform.Service.Fanv2);
+    this.fanService.setCharacteristic(this.platform.Characteristic.Name, 'Rotation speed');
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.Name);
-
-    // each service must implement at-minimum the "required characteristics" for the given service type
+    // fan device to control the fan speed
     // see https://developers.homebridge.io/#/service/Fanv2
-
-    this.service.getCharacteristic(this.platform.Characteristic.Active)
+    this.fanService.getCharacteristic(this.platform.Characteristic.Active)
       .onGet(async () => {
         const value = await valloxService.fetchMetric('A_CYC_HOME_SPEED_SETTING');
         return value > 0;
@@ -40,12 +37,28 @@ export class ValloxAccessory {
         await valloxService.setValues({ A_CYC_HOME_SPEED_SETTING: active });
       });
 
-    this.service.getCharacteristic(this.platform.Characteristic.RotationSpeed)
+    this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed)
       .onGet(async () => {
         return await valloxService.fetchMetric('A_CYC_HOME_SPEED_SETTING');
       })
       .onSet(async (value: CharacteristicValue) => {
         await valloxService.setValues({ A_CYC_HOME_SPEED_SETTING: value });
+      });
+
+
+    // Switch for boost profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.boostSwitchService = this.accessory.getService(this.platform.Service.Switch) || this.accessory.addService(this.platform.Service.Switch);
+    this.boostSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Boost');
+
+    this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const state = await valloxService.getProfile();
+        return state === valloxService.PROFILES.Boost;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.BOOST : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
       });
   }
 }
