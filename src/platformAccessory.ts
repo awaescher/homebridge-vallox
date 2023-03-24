@@ -55,7 +55,8 @@ export class ValloxAccessory {
     this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
       .onGet(async () => {
         const state = await valloxService.getProfile();
-        return state === valloxService.PROFILES.Boost;
+        platform.log.info('profile was ', state);
+        return state === valloxService.PROFILES.BOOST ? 1 : 0;
       })
       .onSet(async (value: CharacteristicValue) => {
         const profile = value ? valloxService.PROFILES.BOOST : valloxService.PROFILES.HOME;
