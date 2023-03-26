@@ -18,6 +18,8 @@ export class ValloxAccessory {
   private supplyAirTemperatureService: Service;
   private humidityService: Service;
   private valloxService: Vallox;
+  private allMetrics: object = {};
+  private lastApiRequest = 0;
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -151,7 +153,29 @@ export class ValloxAccessory {
   }
 
   async getMetric(metric: string) {
-    return this.valloxService.fetchMetric(metric);
+
+    // Check if data is available in cache and is not older than 10 seconds
+    if ((Date.now() - this.lastApiRequest) < 10000) {
+      this.platform.log.info('Getting ' + metric + 'from cache');
+      return this.allMetrics[metric];
+    }
+
+    this.platform.log.info('Updating metrics');
+
+    this.allMetrics = await this.valloxService.fetchMetrics([
+      'A_CYC_TEMP_EXTRACT_AIR',
+      'A_CYC_TEMP_EXHAUST_AIR',
+      'A_CYC_TEMP_OUTDOOR_AIR',
+      'A_CYC_TEMP_SUPPLY_AIR',
+      'A_CYC_ANALOG_SENSOR_INPUT',
+      'A_CYC_HOME_SPEED_SETTING',
+      'A_CYC_BOOST_SPEED_SETTING',
+      'A_CYC_AWAY_SPEED_SETTING',
+    ]);
+
+    this.lastApiRequest = Date.now();
+
+    return this.allMetrics[metric];
   }
 
   async getFanSpeedMetricByCurrentProfile() {
