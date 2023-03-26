@@ -1,7 +1,6 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import Vallox from '@danielbayerlein/vallox-api';
 import { ValloxPlatform } from './platform';
-import pLimit from 'p-limit';
 
 /**
  * Platform Accessory
@@ -20,8 +19,8 @@ export class ValloxAccessory {
   private humidityService: Service;
   private valloxService: Vallox;
   private allMetrics: object = {};
+  private fetchingMetrics = false;
   private lastApiRequest = 0;
-  private limit = pLimit(1); // throttle api access with p-limit (1 concurrent)
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -172,10 +171,17 @@ export class ValloxAccessory {
 
   async getMetric(metric: string) {
 
-    // check if cache needs to be renewed (after 10 seconds)
-    if ((Date.now() - this.lastApiRequest) > 10000) {
+    // wait while metrics are fetched
+    while (this.fetchingMetrics) {
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // check if cache needs to be renewed (after 3 seconds)
+    if ((Date.now() - this.lastApiRequest) > 3000) {
+      this.fetchingMetrics = true;
       this.platform.log.info('Fetching metrics');
-      await this.limit(() => this.fetchMetrics());
+      await this.fetchMetrics();
+      this.fetchingMetrics = false;
     } else {
       this.platform.log.info('Getting ' + metric + 'from cache');
     }
