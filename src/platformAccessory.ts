@@ -145,7 +145,7 @@ export class ValloxAccessory {
     // Humidity sensors
     // https://developers.homebridge.io/#/service/TemperatureSensor
     this.humidityService = this.accessory.getServiceById(this.platform.Service.HumiditySensor, 'Humidity')
-      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Humidity', 'Humidity'));
+      ?? this.accessory.addService(new this.platform.Service.HumiditySensor('Vallox Humidity', 'Humidity'));
     this.humidityService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Humidity');
     this.humidityService.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
       .onGet(async () => {
