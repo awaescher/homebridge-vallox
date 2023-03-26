@@ -155,18 +155,26 @@ export class ValloxAccessory {
 
   async fetchMetrics() {
 
-    this.allMetrics = await this.valloxService.fetchMetrics([
-      'A_CYC_TEMP_EXTRACT_AIR',
-      'A_CYC_TEMP_EXHAUST_AIR',
-      'A_CYC_TEMP_OUTDOOR_AIR',
-      'A_CYC_TEMP_SUPPLY_AIR',
-      'A_CYC_ANALOG_SENSOR_INPUT',
-      'A_CYC_HOME_SPEED_SETTING',
-      'A_CYC_BOOST_SPEED_SETTING',
-      'A_CYC_AWAY_SPEED_SETTING',
-    ]);
+    try {
+      this.allMetrics = await this.valloxService.fetchMetrics([
+        'A_CYC_TEMP_EXTRACT_AIR',
+        'A_CYC_TEMP_EXHAUST_AIR',
+        'A_CYC_TEMP_OUTDOOR_AIR',
+        'A_CYC_TEMP_SUPPLY_AIR',
+        'A_CYC_ANALOG_SENSOR_INPUT',
+        'A_CYC_HOME_SPEED_SETTING',
+        'A_CYC_BOOST_SPEED_SETTING',
+        'A_CYC_AWAY_SPEED_SETTING',
+      ]);
 
-    this.lastApiRequest = Date.now();
+      this.lastApiRequest = Date.now();
+    } catch (e) {
+      if (typeof e === 'string') {
+        this.platform.log.error(e.toUpperCase());
+      } else if (e instanceof Error) {
+        this.platform.log.error(e.message);
+      }
+    }
   }
 
   async getMetric(metric: string) {
