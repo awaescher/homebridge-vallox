@@ -10,7 +10,7 @@
 
 ![Vallox Website](./docs/vallox-website.png)
 
-This pluging adds your Vallox ventilatin units to HomeKit.
+This pluging adds your Vallox ventilation unit to HomeKit.
 
 Tested with ValloPlus 270 MV.
 
