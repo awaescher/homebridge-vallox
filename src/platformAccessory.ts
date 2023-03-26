@@ -1,141 +1,223 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
-
-import { ExampleHomebridgePlatform } from './platform';
+import Vallox from '@danielbayerlein/vallox-api';
+import { ValloxPlatform } from './platform';
 
 /**
  * Platform Accessory
  * An instance of this class is created for each accessory your platform registers
  * Each accessory may expose multiple services of different service types.
  */
-export class ExamplePlatformAccessory {
-  private service: Service;
-
-  /**
-   * These are just used to create a working example
-   * You should implement your own code to track the state of your accessory
-   */
-  private exampleStates = {
-    On: false,
-    Brightness: 100,
-  };
+export class ValloxAccessory {
+  private fanService: Service;
+  private boostSwitchService: Service;
+  private awaySwitchService: Service;
+  private fireplaceSwitchService: Service;
+  private extractAirTemperatureService: Service;
+  private exhaustAirTemperatureService: Service;
+  private outdoorAirTemperatureService: Service;
+  private supplyAirTemperatureService: Service;
+  private humidityService: Service;
 
   constructor(
-    private readonly platform: ExampleHomebridgePlatform,
+    private readonly platform: ValloxPlatform,
     private readonly accessory: PlatformAccessory,
   ) {
 
+    const valloxService = new Vallox({ ip: platform.config.ip, port: platform.config.port });
+
     // set accessory information
     this.accessory.getService(this.platform.Service.AccessoryInformation)!
-      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Default-Manufacturer')
-      .setCharacteristic(this.platform.Characteristic.Model, 'Default-Model')
-      .setCharacteristic(this.platform.Characteristic.SerialNumber, 'Default-Serial');
+      .setCharacteristic(this.platform.Characteristic.Manufacturer, 'Vallox');
 
-    // get the LightBulb service if it exists, otherwise create a new LightBulb service
-    // you can create multiple services for each accessory
-    this.service = this.accessory.getService(this.platform.Service.Lightbulb) || this.accessory.addService(this.platform.Service.Lightbulb);
+    this.fanService = this.accessory.getService(this.platform.Service.Fanv2) || this.accessory.addService(this.platform.Service.Fanv2);
+    this.fanService.setCharacteristic(this.platform.Characteristic.Name, 'Rotation speed');
 
-    // set the service name, this is what is displayed as the default name on the Home app
-    // in this example we are using the name we stored in the `accessory.context` in the `discoverDevices` method.
-    this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.exampleDisplayName);
+    // fan device to control the fan speed
+    // see https://developers.homebridge.io/#/service/Fanv2
+    this.fanService.getCharacteristic(this.platform.Characteristic.Active)
+      .onGet(async () => {
+        const value = await getFanSpeedOfCurrentProfile(valloxService);
+        return value > 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const active = value ? 40 : 0;
+        await setFanSpeedOfCurrentProfile(valloxService, active);
+      });
 
-    // each service must implement at-minimum the "required characteristics" for the given service type
-    // see https://developers.homebridge.io/#/service/Lightbulb
+    this.fanService.getCharacteristic(this.platform.Characteristic.RotationSpeed)
+      .onGet(async () => {
+        return await getFanSpeedOfCurrentProfile(valloxService);
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        await setFanSpeedOfCurrentProfile(valloxService, value);
+      });
 
-    // register handlers for the On/Off Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.On)
-      .onSet(this.setOn.bind(this))                // SET - bind to the `setOn` method below
-      .onGet(this.getOn.bind(this));               // GET - bind to the `getOn` method below
+    // Switch for BOOST profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.boostSwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Boost')
+      ?? this.accessory.addService(new this.platform.Service.Switch('Vallox Profile Boost', 'Boost'));
+    this.boostSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Profile Boost');
 
-    // register handlers for the Brightness Characteristic
-    this.service.getCharacteristic(this.platform.Characteristic.Brightness)
-      .onSet(this.setBrightness.bind(this));       // SET - bind to the 'setBrightness` method below
+    this.boostSwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.BOOST ? 1 : 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.BOOST : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
+      });
 
-    /**
-     * Creating multiple services of the same type.
-     *
-     * To avoid "Cannot add a Service with the same UUID another Service without also defining a unique 'subtype' property." error,
-     * when creating multiple services of the same type, you need to use the following syntax to specify a name and subtype id:
-     * this.accessory.getService('NAME') || this.accessory.addService(this.platform.Service.Lightbulb, 'NAME', 'USER_DEFINED_SUBTYPE_ID');
-     *
-     * The USER_DEFINED_SUBTYPE must be unique to the platform accessory (if you platform exposes multiple accessories, each accessory
-     * can use the same sub type id.)
-     */
+    // Switch for AWAY profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.awaySwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Away')
+      ?? this.accessory.addService(new this.platform.Service.Switch('Vallox Profile Away', 'Away'));
+    this.awaySwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Profile Away');
 
-    // Example: add two "motion sensor" services to the accessory
-    const motionSensorOneService = this.accessory.getService('Motion Sensor One Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor One Name', 'YourUniqueIdentifier-1');
+    this.awaySwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.AWAY ? 1 : 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.AWAY : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
+      });
 
-    const motionSensorTwoService = this.accessory.getService('Motion Sensor Two Name') ||
-      this.accessory.addService(this.platform.Service.MotionSensor, 'Motion Sensor Two Name', 'YourUniqueIdentifier-2');
+    // Switch for FIREPLACE profile
+    // see https://developers.homebridge.io/#/service/Switch
+    this.fireplaceSwitchService = this.accessory.getServiceById(this.platform.Service.Switch, 'Fireplace')
+      ?? this.accessory.addService(new this.platform.Service.Switch('Vallox Profile Fireplace', 'Fireplace'));
+    this.fireplaceSwitchService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Profile Fireplace');
 
-    /**
-     * Updating characteristics values asynchronously.
-     *
-     * Example showing how to update the state of a Characteristic asynchronously instead
-     * of using the `on('get')` handlers.
-     * Here we change update the motion sensor trigger states on and off every 10 seconds
-     * the `updateCharacteristic` method.
-     *
-     */
-    let motionDetected = false;
-    setInterval(() => {
-      // EXAMPLE - inverse the trigger
-      motionDetected = !motionDetected;
+    this.fireplaceSwitchService.getCharacteristic(this.platform.Characteristic.On)
+      .onGet(async () => {
+        const profile = await valloxService.getProfile();
+        return profile === valloxService.PROFILES.FIREPLACE ? 1 : 0;
+      })
+      .onSet(async (value: CharacteristicValue) => {
+        const profile = value ? valloxService.PROFILES.FIREPLACE : valloxService.PROFILES.HOME;
+        await valloxService.setProfile(profile);
+      });
 
-      // push the new value to HomeKit
-      motionSensorOneService.updateCharacteristic(this.platform.Characteristic.MotionDetected, motionDetected);
-      motionSensorTwoService.updateCharacteristic(this.platform.Characteristic.MotionDetected, !motionDetected);
+    // TemperatureSensor
+    // https://developers.homebridge.io/#/service/TemperatureSensor
+    // german "Raumluft"
+    this.extractAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Extract Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Extract Air Temperature', 'Extract Air'));
+    this.extractAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Extract Air Temperature');
+    this.extractAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_EXTRACT_AIR');
+      });
 
-      this.platform.log.debug('Triggering motionSensorOneService:', motionDetected);
-      this.platform.log.debug('Triggering motionSensorTwoService:', !motionDetected);
-    }, 10000);
+    //  german "Fortluft"
+    this.exhaustAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Exhaust Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Exhaust Air Temperature', 'Exhaust Air'));
+    this.exhaustAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Exhaust Air Temperature');
+    this.exhaustAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_EXHAUST_AIR');
+      });
+
+    //  german "Außenluft"
+    this.outdoorAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Outdoor Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Outdoor Air Temperature', 'Outdoor Air'));
+    this.outdoorAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Outdoor Air Temperature');
+    this.outdoorAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_OUTDOOR_AIR');
+      });
+
+    //  german "Zuluft"
+    this.supplyAirTemperatureService = this.accessory.getServiceById(this.platform.Service.TemperatureSensor, 'Supply Air')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Supply Air Temperature', 'Supply Air'));
+    this.supplyAirTemperatureService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Supply Air Temperature');
+    this.supplyAirTemperatureService.getCharacteristic(this.platform.Characteristic.CurrentTemperature)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_TEMP_SUPPLY_AIR');
+      });
+
+    // Humidity sensors
+    // https://developers.homebridge.io/#/service/TemperatureSensor
+    this.humidityService = this.accessory.getServiceById(this.platform.Service.HumiditySensor, 'Humidity')
+      ?? this.accessory.addService(new this.platform.Service.TemperatureSensor('Vallox Humidity', 'Humidity'));
+    this.humidityService.setCharacteristic(this.platform.Characteristic.Name, 'Vallox Humidity');
+    this.humidityService.getCharacteristic(this.platform.Characteristic.CurrentRelativeHumidity)
+      .onGet(async () => {
+        return await valloxService.fetchMetric('A_CYC_ANALOG_SENSOR_INPUT');
+      });
   }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, turning on a Light bulb.
-   */
-  async setOn(value: CharacteristicValue) {
-    // implement your own code to turn your device on/off
-    this.exampleStates.On = value as boolean;
-
-    this.platform.log.debug('Set Characteristic On ->', value);
-  }
-
-  /**
-   * Handle the "GET" requests from HomeKit
-   * These are sent when HomeKit wants to know the current state of the accessory, for example, checking if a Light bulb is on.
-   *
-   * GET requests should return as fast as possbile. A long delay here will result in
-   * HomeKit being unresponsive and a bad user experience in general.
-   *
-   * If your device takes time to respond you should update the status of your device
-   * asynchronously instead using the `updateCharacteristic` method instead.
-
-   * @example
-   * this.service.updateCharacteristic(this.platform.Characteristic.On, true)
-   */
-  async getOn(): Promise<CharacteristicValue> {
-    // implement your own code to check if the device is on
-    const isOn = this.exampleStates.On;
-
-    this.platform.log.debug('Get Characteristic On ->', isOn);
-
-    // if you need to return an error to show the device as "Not Responding" in the Home app:
-    // throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-
-    return isOn;
-  }
-
-  /**
-   * Handle "SET" requests from HomeKit
-   * These are sent when the user changes the state of an accessory, for example, changing the Brightness
-   */
-  async setBrightness(value: CharacteristicValue) {
-    // implement your own code to set the brightness
-    this.exampleStates.Brightness = value as number;
-
-    this.platform.log.debug('Set Characteristic Brightness -> ', value);
-  }
-
 }
+
+async function getFanSpeedMetricByCurrentProfile(valloxService: Vallox) {
+
+  const profile = await valloxService.getProfile();
+
+  let metric = 'A_CYC_HOME_SPEED_SETTING';
+  if (profile === valloxService.PROFILES.BOOST) {
+    metric = 'A_CYC_BOOST_SPEED_SETTING';
+  } else if (profile === valloxService.PROFILES.AWAY) {
+    metric = 'A_CYC_AWAY_SPEED_SETTING';
+  } else if (profile === valloxService.PROFILES.FIREPLACE) {
+    metric = ''; // n/a
+  }
+
+  return metric;
+}
+
+async function getFanSpeedOfCurrentProfile(valloxService: Vallox) {
+
+  const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
+
+  if (metric === '') {
+    return 0;
+  }
+
+  return await valloxService.fetchMetric(metric);
+}
+
+async function setFanSpeedOfCurrentProfile(valloxService: Vallox, value: CharacteristicValue) {
+  const metric = await getFanSpeedMetricByCurrentProfile(valloxService);
+  if (metric !== '') {
+    await valloxService.setValues({ [metric]: value });
+  }
+}
+
+// more info on settings at https://github.com/yozik04/vallox_websocket_api
+
+// # Setting Home profile fan speed
+// await client.setValues({'A_CYC_HOME_SPEED_SETTING': 10})
+
+// # Setting Home profile target temperature
+// await client.setValues({'A_CYC_HOME_AIR_TEMP_TARGET': 15})
+
+
+// # Setting Away profile fan speed
+// await client.setValues({'A_CYC_AWAY_SPEED_SETTING': 10})
+
+// # Setting Away profile target temperature
+// await client.setValues({'A_CYC_AWAY_AIR_TEMP_TARGET': 15})
+
+
+// # Setting Boost profile fan speed
+// await client.setValues({'A_CYC_BOOST_SPEED_SETTING': 10})
+
+// # Setting Boost profile target temperature
+// await client.setValues({'A_CYC_BOOST_AIR_TEMP_TARGET': 15})
+
+// # Setting Boost profile timer
+// await client.setValues({
+//   'A_CYC_BOOST_TIMER': 30, #Minutes
+// })
+
+// # Setting Fireplace profile fan speeds
+// await client.setValues({
+//   'A_CYC_FIREPLACE_EXTR_FAN': 50,
+//   'A_CYC_FIREPLACE_SUPP_FAN': 50
+// })
+
+// # Setting Fireplace profile timer
+// await client.setValues({
+//   'A_CYC_FIREPLACE_TIMER': 15, #Minutes
+// })

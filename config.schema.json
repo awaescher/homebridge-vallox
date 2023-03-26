@@ -1,15 +1,21 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "Homebridge Vallox",
   "pluginType": "platform",
   "singular": true,
   "schema": {
     "type": "object",
     "properties": {
-      "name": {
-        "title": "Name",
+      "ip": {
+        "title": "IP address of the Vallox device in your local network.",
         "type": "string",
         "required": true,
-        "default": "Example Dynamic Platform"
+        "placeholder": "192.168.0.100"
+      },
+      "port": {
+        "title": "Port on which the connection to the Vallox device should be made on",
+        "type": "number",
+        "required": true,
+        "default": 80
       }
     }
   }
