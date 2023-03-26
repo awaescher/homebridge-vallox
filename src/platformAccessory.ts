@@ -1,6 +1,7 @@
 import { Service, PlatformAccessory, CharacteristicValue } from 'homebridge';
 import Vallox from '@danielbayerlein/vallox-api';
 import { ValloxPlatform } from './platform';
+import pLimit from 'p-limit';
 
 /**
  * Platform Accessory
@@ -20,6 +21,7 @@ export class ValloxAccessory {
   private valloxService: Vallox;
   private allMetrics: object = {};
   private lastApiRequest = 0;
+  private limit = pLimit(1); // throttle api access with p-limit (1 concurrent)
 
   constructor(
     private readonly platform: ValloxPlatform,
@@ -152,15 +154,7 @@ export class ValloxAccessory {
       });
   }
 
-  async getMetric(metric: string) {
-
-    // Check if data is available in cache and is not older than 10 seconds
-    if ((Date.now() - this.lastApiRequest) < 10000) {
-      this.platform.log.info('Getting ' + metric + 'from cache');
-      return this.allMetrics[metric];
-    }
-
-    this.platform.log.info('Updating metrics');
+  async fetchMetrics() {
 
     this.allMetrics = await this.valloxService.fetchMetrics([
       'A_CYC_TEMP_EXTRACT_AIR',
@@ -174,6 +168,17 @@ export class ValloxAccessory {
     ]);
 
     this.lastApiRequest = Date.now();
+  }
+
+  async getMetric(metric: string) {
+
+    // check if cache needs to be renewed (after 10 seconds)
+    if ((Date.now() - this.lastApiRequest) > 10000) {
+      this.platform.log.info('Fetching metrics');
+      await this.limit(() => this.fetchMetrics());
+    } else {
+      this.platform.log.info('Getting ' + metric + 'from cache');
+    }
 
     return this.allMetrics[metric];
   }

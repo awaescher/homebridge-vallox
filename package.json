@@ -37,6 +37,7 @@
     "typescript": "^4.4.4"
   },
   "dependencies": {
-    "@danielbayerlein/vallox-api": "^1.0.1"
+    "@danielbayerlein/vallox-api": "^1.0.1",
+    "p-limit": "^4.0.0"
   }
 }
