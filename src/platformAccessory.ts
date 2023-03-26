@@ -180,8 +180,14 @@ export class ValloxAccessory {
   async getMetric(metric: string) {
 
     // wait while metrics are fetched
+    let loop = 0;
     while (this.fetchingMetrics) {
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 30));
+      if (loop++ > 100){
+        this.platform.log.warn('Breaking the wait loop');
+        this.lastApiRequest = 0;
+        this.fetchingMetrics = false;
+      }
     }
 
     // check if cache needs to be renewed (after 3 seconds)
