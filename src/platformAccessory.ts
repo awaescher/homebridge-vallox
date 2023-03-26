@@ -186,12 +186,14 @@ export class ValloxAccessory {
 
     // check if cache needs to be renewed (after 3 seconds)
     if ((Date.now() - this.lastApiRequest) > 3000) {
+      const start = Date.now();
       this.fetchingMetrics = true;
       this.platform.log.info('Fetching metrics');
       await this.fetchMetrics();
+      this.platform.log.info('Done. Took ' + (Date.now() - start) / 1000 + 'seconds');
       this.fetchingMetrics = false;
     } else {
-      this.platform.log.info('Getting ' + metric + 'from cache');
+      this.platform.log.info('Getting ' + metric + ' from cache');
     }
 
     return this.allMetrics[metric];

@@ -4,6 +4,7 @@ async function test () {
   const Vallox = require('@danielbayerlein/vallox-api');
   const valloxService = new Vallox({ ip: '192.168.0.9', port: 80 });
 
+  const start = Date.now();
   let v = await valloxService.fetchMetrics([
     'A_CYC_TEMP_EXTRACT_AIR',
     'A_CYC_TEMP_EXHAUST_AIR',
@@ -14,6 +15,7 @@ async function test () {
     'A_CYC_BOOST_SPEED_SETTING',
     'A_CYC_AWAY_SPEED_SETTING',
   ]);
+  console.log('Done. Took ' + (Date.now() - start) / 1000 + ' seconds');
   console.log(typeof(v));
   console.log(v['A_CYC_TEMP_SUPPLY_AIR']);
 }
