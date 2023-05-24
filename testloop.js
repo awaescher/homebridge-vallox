@@ -31,14 +31,12 @@ async function getAndLogMetric(metric) {
 
 async function getMetric(metric) {
 
-  const hasCache = _allMetrics !== null;
-
   if (!_fetchingMetrics) {
 
     // check if cache needs to be renewed (after 3 seconds)
     const isOldCache = (Date.now() - _lastApiRequest) > 3000;
 
-    if (!hasCache || isOldCache) {
+    if (_allMetrics === null || isOldCache) {
       _fetchingMetrics = true;
 
       console.log('Fetching metrics');
@@ -48,7 +46,7 @@ async function getMetric(metric) {
     }
   }
 
-  return hasCache ? _allMetrics[metric] : 0;
+  return _allMetrics !== null ? _allMetrics[metric] : 0;
 }
 
 async function fetchMetrics() {

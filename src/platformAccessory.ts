@@ -179,27 +179,24 @@ export class ValloxAccessory {
 
   async getMetric(metric: string) {
 
-    const hasCache = this.allMetrics !== null;
-
     if (!this.fetchingMetrics) {
 
       // check if cache needs to be renewed (after 3 seconds)
       const isOldCache = (Date.now() - this.lastApiRequest) > 3000;
 
-      if (!hasCache || isOldCache) {
+      if (this.allMetrics === null || isOldCache) {
 
         this.fetchingMetrics = true;
 
-        this.platform.log.info('Fetching metrics');
         const start = Date.now();
         await this.fetchMetrics();
-        this.platform.log.info('Done. Took ' + (Date.now() - start) / 1000 + 'seconds');
+        this.platform.log.info('Fetching values took ' + (Date.now() - start) / 1000 + 'seconds');
 
         this.fetchingMetrics = false;
       }
     }
 
-    return hasCache ? this.allMetrics[metric] : 0;
+    return this.allMetrics !== null ? this.allMetrics[metric] : 0;
   }
 
   async getFanSpeedMetricByCurrentProfile() {
