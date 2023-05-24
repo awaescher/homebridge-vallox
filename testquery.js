@@ -16,7 +16,9 @@ async function test () {
     'A_CYC_AWAY_SPEED_SETTING',
   ]);
   console.log('Done. Took ' + (Date.now() - start) / 1000 + ' seconds');
-  console.log(typeof(v));
+  console.log(v['A_CYC_TEMP_EXTRACT_AIR']);
+  console.log(v['A_CYC_TEMP_EXHAUST_AIR']);
+  console.log(v['A_CYC_TEMP_OUTDOOR_AIR']);
   console.log(v['A_CYC_TEMP_SUPPLY_AIR']);
 }
 

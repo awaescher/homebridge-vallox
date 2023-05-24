@@ -179,30 +179,27 @@ export class ValloxAccessory {
 
   async getMetric(metric: string) {
 
-    // wait while metrics are fetched
-    let loop = 0;
-    while (this.fetchingMetrics) {
-      await new Promise(resolve => setTimeout(resolve, 30));
-      if (loop++ > 100){
-        this.platform.log.warn('Breaking the wait loop');
-        this.lastApiRequest = 0;
+    const hasCache = this.allMetrics !== null;
+
+    if (!this.fetchingMetrics) {
+
+      // check if cache needs to be renewed (after 3 seconds)
+      const isOldCache = (Date.now() - this.lastApiRequest) > 3000;
+
+      if (!hasCache || isOldCache) {
+
+        this.fetchingMetrics = true;
+
+        this.platform.log.info('Fetching metrics');
+        const start = Date.now();
+        await this.fetchMetrics();
+        this.platform.log.info('Done. Took ' + (Date.now() - start) / 1000 + 'seconds');
+
         this.fetchingMetrics = false;
       }
     }
 
-    // check if cache needs to be renewed (after 3 seconds)
-    if ((Date.now() - this.lastApiRequest) > 3000) {
-      const start = Date.now();
-      this.fetchingMetrics = true;
-      this.platform.log.info('Fetching metrics');
-      await this.fetchMetrics();
-      this.platform.log.info('Done. Took ' + (Date.now() - start) / 1000 + 'seconds');
-      this.fetchingMetrics = false;
-    } else {
-      this.platform.log.info('Getting ' + metric + ' from cache');
-    }
-
-    return this.allMetrics[metric];
+    return hasCache ? this.allMetrics[metric] : 0;
   }
 
   async getFanSpeedMetricByCurrentProfile() {
