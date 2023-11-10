@@ -4,8 +4,6 @@
 
 </p>
 
-<span align="center">
-
 # Homebridge Vallox Plugin
 
 ![Vallox Website](./docs/vallox-website.png)
